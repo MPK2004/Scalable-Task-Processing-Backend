@@ -8,7 +8,7 @@ async def verify_worker():
     print("Verifying Phase 4: Worker Service...")
     
     async with httpx.AsyncClient(base_url=BASE_URL) as client:
-        response = await client.post("/tasks/")
+        response = await client.post("/tasks/", json={"input_data": "Hello Verification"})
         if response.status_code != 201:
             print(f"Failed to create task: {response.text}")
             return False
@@ -27,7 +27,8 @@ async def verify_worker():
             
             if status == "COMPLETED":
                 print("Task Completed!")
-                if task_status["result"] == "Computed!":
+                # Expected result is reversed input: "noitacifireV olleH"
+                if task_status["result"] == "noitacifireV olleH":
                     print("Result Verified!")
                     return True
                 else:

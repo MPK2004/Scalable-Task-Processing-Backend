@@ -5,7 +5,7 @@ class TaskBase(BaseModel):
     pass
 
 class TaskCreate(TaskBase):
-    pass
+    input_data: str
 
 class TaskResponse(TaskBase):
     id: int

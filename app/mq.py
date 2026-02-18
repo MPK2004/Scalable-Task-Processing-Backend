@@ -16,7 +16,7 @@ async def get_connection():
             print(f"RabbitMQ connection failed, retrying in 2s... ({e})")
             await asyncio.sleep(2)
 
-async def publish_task(task_id: int):
+async def publish_task(task_id: int, input_data: str = None):
     connection = await get_connection()
     async with connection:
         channel = await connection.channel()
@@ -24,7 +24,7 @@ async def publish_task(task_id: int):
         # Declare queue
         queue = await channel.declare_queue(QUEUE_NAME, durable=True)
         
-        message_body = json.dumps({"task_id": task_id}).encode()
+        message_body = json.dumps({"task_id": task_id, "input_data": input_data}).encode()
         
         await channel.default_exchange.publish(
             aio_pika.Message(body=message_body),

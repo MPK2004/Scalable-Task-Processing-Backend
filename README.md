@@ -1,82 +1,97 @@
-# Scalable Task Processing Backend
+# Scalable Task Processing Backend (Interview-Ready)
 
 A production-style asynchronous task processing system built with FastAPI, PostgreSQL, Redis, RabbitMQ, and Docker.
 
-## 🚀 Features
-
-- **Async Task Submission**: Submit long-running tasks via REST API.
-- **Message Queue**: Tasks are pushed to RabbitMQ for decoupled processing.
-- **Background Worker**: Dedicated worker service consumes tasks and simulates processing.
-- **Redis Caching**: Task status is cached in Redis for fast retrieval (Read-through/Write-through).
-- **PostgreSQL Persistence**: All tasks and results are stored in a relational database.
-- **Dockerized**: Full system orchestration with Docker Compose.
-
 ## 🏗️ Architecture
 
-```mermaid
-graph LR
-    Client[Client] -->|POST /tasks| API[FastAPI]
-    Client -->|GET /tasks/:id| API
-    API -->|Read/Write| Cache[(Redis)]
-    API -->|Persist| DB[(PostgreSQL)]
-    API -->|Publish| Queue[RabbitMQ]
-    Queue -->|Consume| Worker[Worker Service]
-    Worker -->|Update Status| DB
-    Worker -->|Update Cache| Cache
+```
++------------+        +---------------+        +-----------+
+|   Client   | -----> | FastAPI (API) | -----> | PostgreSQL|
++------------+        +---------------+        +-----------+
+                             |
+                             v
+                       +------------+
+                       | RabbitMQ   |
+                       +------------+
+                             |
+                             v
+                       +------------+
+                       |  Worker    |
+                       +------------+
+                             |
+                             v
+                         Redis Cache
 ```
 
-## 🛠️ Tech Stack
+## 🚀 Request Lifecycle (Full CRUD Flow)
 
-- **Python 3.10**
-- **FastAPI** (API Framework)
-- **PostgreSQL** (Database)
-- **Redis** (Cache)
-- **RabbitMQ** (Message Broker)
-- **Docker & Docker Compose**
+1.  **Submit Task (`POST /tasks`)**
+    *   Client sends payload `{"input_data": "hello"}`.
+    *   **Service Layer** creates a Task record in **PostgreSQL** with status `PENDING`.
+    *   Service pushes the Task ID to **RabbitMQ** queue.
+    *   Service caches initial state in **Redis** (Write-through).
+    *   Returns `201 Created` with Task ID to client.
+
+2.  **Process Task (Async Worker)**
+    *   **Worker** consumes message from RabbitMQ.
+    *   Updates DB status to `PROCESSING`.
+    *   Performs transformation (String Reversal: "olleh") and simulates delay (5s).
+    *   Updates DB status to `COMPLETED` and saves result.
+    *   Updates **Redis** with result and sets TTL (60s).
+
+3.  **Check Status (`GET /tasks/{id}`)**
+    *   **Service Layer** checks **Redis** first (Cache Hit).
+    *   If miss, fetches from **PostgreSQL** and populates Redis (Read-through).
+    *   Returns JSON: `{"status": "COMPLETED", "result": "olleh"}`.
+
+## 🛠️ Tech Stack & Key Decisions
+
+*   **FastAPI**: Modern, high-performance, strictly typed (Pydantic).
+*   **PostgreSQL (SQLAlchemy + Enum)**: Robust relational data storage with strict schema.
+*   **Redis**: High-speed caching layer to reduce DB load on status polling.
+*   **RabbitMQ**: Reliable message broker to decouple API from heavy processing.
+*   **Docker Compose**: Full system orchestration with Health Checks and Service dependency management.
 
 ## 📦 Setup & Running
 
-### Prerequisites
-- Docker & Docker Compose
+1.  **Start the System**
+    ```bash
+    docker compose up -d --build
+    ```
 
-### 1. Start the System
-```bash
-docker compose up -d --build
-```
+2.  **Access API**
+    *   Swagger UI: [http://localhost:8005/docs](http://localhost:8005/docs)
+    *   API Root: [http://localhost:8005](http://localhost:8005)
 
-### 2. Access API
-- **Swagger UI**: [http://localhost:8002/docs](http://localhost:8002/docs)
-- **API Root**: [http://localhost:8002](http://localhost:8002)
-
-### 3. Verify System
-Run the included verification script:
-```bash
-# Install dependencies locally if needed (httpx)
-pip install httpx
-
-# Run verification
-python verify_phase4.py
-```
-Note: The verification script assumes the API is running on port **8005** (mapped in docker-compose).
+3.  **Verify System**
+    ```bash
+    # Install dependency
+    pip install httpx
+    
+    # Run End-to-End Test
+    python verify_phase4.py
+    ```
 
 ## 🧪 API Endpoints
 
 ### `POST /tasks/`
 Create a new task.
-- **Response**: `{"id": 1, "status": "PENDING", "result": null}`
+*   **Body**: `{"input_data": "string to reverse"}`
+*   **Response**: `{"id": 1, "status": "PENDING", "result": null}`
 
 ### `GET /tasks/{id}`
 Get task status.
-- **Response**: `{"id": 1, "status": "COMPLETED", "result": "Computed!"}`
+*   **Response**: `{"id": 1, "status": "COMPLETED", "result": "esrever ot gnirts"}`
 
-## 🔧 Configuration
+## ⚠️ Failure Handling
 
-Environment variables are set in `docker-compose.yml`:
-- `DATABASE_URL`: Connection string for PostgreSQL.
-- `REDIS_HOST`, `REDIS_PORT`: Redis configuration.
-- `RABBITMQ_URL`: RabbitMQ connection string.
+*   **Worker Crash**: If the worker crashes mid-task, the message is unacknowledged (if configured) or the task remains in `PROCESSING` state in DB.
+    *   *Mitigation*: Implement a "Stuck Task Sweeper" cron job or Dead Letter Queue (DLQ).
+*   **DB/Queue Down**: The API implements **Retry Logic** (5 attempts) during startup to handle race conditions.
+*   **Cache Miss**: System gracefully falls back to DB if Redis is unavailable or key expires.
 
-## 🔍 Implementation Details
+## 🔮 Future Improvements
 
-- **Robust Connections**: API and Worker include retry logic to handle container startup race conditions.
-- **Shared Codebase**: API and Worker share `app/` models and logic, ensuring consistency.
+*   **Dead Letter Queue (DLQ)**: Handle tasks that repeatedly fail.
+*   **Authentication**: Add JWT (OAuth2) for secure task access.
+*   **Prometheus/Grafana**: Monitoring for Queue depth and Worker latency.

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum
+from sqlalchemy import Column, Integer, String, Enum as SQLEnum
 from .database import Base
 import enum
 
@@ -12,5 +12,5 @@ class Task(Base):
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, index=True)
-    status = Column(String, default=TaskStatus.PENDING, index=True)
+    status = Column(SQLEnum(TaskStatus), default=TaskStatus.PENDING, index=True)
     result = Column(String, nullable=True)
