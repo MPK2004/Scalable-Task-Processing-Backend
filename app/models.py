@@ -13,4 +13,5 @@ class Task(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     status = Column(SQLEnum(TaskStatus), default=TaskStatus.PENDING, index=True)
+    input_data = Column(String, nullable=False)
     result = Column(String, nullable=True)

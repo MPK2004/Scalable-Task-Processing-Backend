@@ -90,6 +90,18 @@ Get task status.
 *   **DB/Queue Down**: The API implements **Retry Logic** (5 attempts) during startup to handle race conditions.
 *   **Cache Miss**: System gracefully falls back to DB if Redis is unavailable or key expires.
 
+## 📈 Scalability Strategy
+
+*   **Horizontal Scaling (Workers)**: Spin up multiple worker containers (`docker compose up -d --scale worker=3`). RabbitMQ automatically round-robins tasks.
+*   **Database**: Use Read Replicas for `GET` requests and a primary for `POST`.
+*   **Redis Cluster**: Use Redis Cluster mode for high availability and partitioning.
+
+## 🛑 Limitations
+
+*   **No Dead Letter Queue**: Failed messages are acked (removed from queue) but marked FAILED in DB. Ideally, retriable errors should go to a DLQ.
+*   **Authentication**: Currently open API. Needs OAuth2/JWT for production.
+*   **Observability**: Basic logging. Needs Prometheus/Grafana or ELK stack for real monitoring.
+
 ## 🔮 Future Improvements
 
 *   **Dead Letter Queue (DLQ)**: Handle tasks that repeatedly fail.

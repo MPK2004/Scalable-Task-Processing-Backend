@@ -23,4 +23,5 @@ async def read_task(
     db: AsyncSession = Depends(database.get_db),
     redis_client: redis.Redis = Depends(get_redis)
 ):
+    # Service now returns a Pydantic model compatible with response_model
     return await services.TaskService.get_task(task_id, db, redis_client)

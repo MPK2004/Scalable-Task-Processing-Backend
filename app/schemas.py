@@ -1,11 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, constr
 from .models import TaskStatus
 
 class TaskBase(BaseModel):
     pass
 
 class TaskCreate(TaskBase):
-    input_data: str
+    input_data: constr(min_length=1, max_length=500)
 
 class TaskResponse(TaskBase):
     id: int
