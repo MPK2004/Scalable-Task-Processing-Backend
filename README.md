@@ -1,4 +1,4 @@
-# Scalable Task Processing Backend (Interview-Ready)
+# Scalable Task Processing Backend
 
 A production-style asynchronous task processing system built with FastAPI, PostgreSQL, Redis, RabbitMQ, and Docker.
 
